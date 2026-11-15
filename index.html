@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Condor Suites | Control Operativo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #FAF8F5; color: #1E293B; }
+    .card-shadow { box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05); }
+    input[type="range"] { accent-color: #0F172A; }
+  </style>
+</head>
+<body class="pb-24 md:pb-10">
+
+  <!-- Header -->
+  <header class="bg-white border-b border-stone-200 sticky top-0 z-30">
+    <div class="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+      <div>
+        <span class="text-xs font-bold tracking-widest uppercase text-amber-700">Hotel Condor Suites</span>
+        <h1 class="text-lg md:text-xl font-bold text-slate-800">Mantenimiento & Lavandería</h1>
+      </div>
+      <div id="badge-alertas" class="hidden bg-red-50 border border-red-200 text-red-700 px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 animate-pulse">
+        <span>⚠️</span> <span id="texto-alertas">0 alertas de suministro</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-4 pt-6 space-y-8">
+
+    <!-- Banner de Alerta Crítica Lavandería -->
+    <section id="panel-alarmas" class="hidden bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl card-shadow">
+      <div class="flex items-start gap-3">
+        <span class="text-xl">🚨</span>
+        <div>
+          <h3 class="font-bold text-red-800 text-sm">Solicitud de Suministro Requerida (Nivel ≤ 20%)</h3>
+          <ul id="lista-alarmas" class="text-xs text-red-700 mt-1 list-disc list-inside space-y-0.5"></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 1: AGUA Y GAS -->
+    <section id="sec-mantenimiento" class="space-y-6">
+      <div class="flex items-center justify-between">
+        <h2 class="text-base font-bold text-slate-700 uppercase tracking-wider">1. Recursos Hídricos y Gas</h2>
+        <span class="text-xs text-slate-400">Toque el botón para marcar recurso activo</span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Tanques de Agua -->
+        <div class="bg-white p-5 rounded-2xl border border-stone-200/80 card-shadow space-y-4">
+          <div class="flex items-center gap-2 border-b border-stone-100 pb-3">
+            <span class="p-2 bg-sky-50 text-sky-600 rounded-lg text-lg">💧</span>
+            <div>
+              <h3 class="font-bold text-slate-800">Tanques de Agua</h3>
+              <p class="text-xs text-slate-400">Control de almacenamiento externo e interno</p>
+            </div>
+          </div>
+          <div id="contenedor-agua" class="space-y-4"></div>
+        </div>
+
+        <!-- Bombonas de Gas -->
+        <div class="bg-white p-5 rounded-2xl border border-stone-200/80 card-shadow space-y-4">
+          <div class="flex items-center gap-2 border-b border-stone-100 pb-3">
+            <span class="p-2 bg-amber-50 text-amber-600 rounded-lg text-lg">🔥</span>
+            <div>
+              <h3 class="font-bold text-slate-800">Bombonas de Gas</h3>
+              <p class="text-xs text-slate-400">Control de cilindros superior e inferior</p>
+            </div>
+          </div>
+          <div id="contenedor-gas" class="space-y-4"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 2: LAVANDERÍA -->
+    <section id="sec-lavanderia" class="space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+        <h2 class="text-base font-bold text-slate-700 uppercase tracking-wider">2. Químicos de Lavandería</h2>
+        <span class="text-xs text-slate-500 bg-stone-200/60 px-2.5 py-1 rounded-md">Consumo automático: <strong>-2% diario</strong> | Alerta: <strong>≤ 20%</strong></span>
+      </div>
+
+      <div id="contenedor-lavanderia" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
+    </section>
+
+  </main>
+
+  <!-- Navegación Inferior Móvil -->
+  <nav class="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-stone-200 flex justify-around py-2.5 z-40">
+    <a href="#sec-mantenimiento" class="flex flex-col items-center text-xs font-semibold text-slate-700">
+      <span class="text-lg">🛠️</span>
+      <span>Agua y Gas</span>
+    </a>
+    <a href="#sec-lavanderia" class="flex flex-col items-center text-xs font-semibold text-slate-700">
+      <span class="text-lg">🧺</span>
+      <span>Lavandería</span>
+    </a>
+  </nav>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
