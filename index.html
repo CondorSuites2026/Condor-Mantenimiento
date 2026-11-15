@@ -6,89 +6,210 @@
   <title>Condor Suites | Control Operativo</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #FAF8F5; color: #1E293B; }
     .card-shadow { box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05); }
     input[type="range"] { accent-color: #0F172A; }
   </style>
 </head>
-<body class="pb-24 md:pb-10">
+<body class="pb-24 md:pb-12">
 
-  <!-- Header -->
+  <!-- Header con Logo Superior Izquierdo -->
   <header class="bg-white border-b border-stone-200 sticky top-0 z-30">
-    <div class="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
-      <div>
-        <span class="text-xs font-bold tracking-widest uppercase text-amber-700">Hotel Condor Suites</span>
-        <h1 class="text-lg md:text-xl font-bold text-slate-800">Mantenimiento & Lavandería</h1>
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3 min-w-0">
+        <img
+          src="./Logo B-N Fondo Transp.png"
+          alt="Logo Hotel Condor Suites"
+          class="h-10 sm:h-12 w-auto object-contain shrink-0"
+        />
+        <div class="border-l border-stone-200 pl-3 min-w-0">
+          <span class="block text-[11px] font-bold tracking-widest uppercase text-amber-700 truncate">
+            Hotel Condor Suites
+          </span>
+          <h1 class="text-sm sm:text-lg font-bold text-slate-800 truncate">
+            Mantenimiento & Lavandería
+          </h1>
+        </div>
       </div>
-      <div id="badge-alertas" class="hidden bg-red-50 border border-red-200 text-red-700 px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 animate-pulse">
-        <span>⚠️</span> <span id="texto-alertas">0 alertas de suministro</span>
+
+      <div id="badge-alertas" class="hidden bg-red-50 border border-red-200 text-red-700 px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 animate-pulse shrink-0">
+        <span>⚠️</span> <span id="texto-alertas">0 alertas</span>
       </div>
     </div>
   </header>
 
-  <main class="max-w-5xl mx-auto px-4 pt-6 space-y-8">
+  <main class="max-w-6xl mx-auto px-4 pt-6 space-y-8">
 
-    <!-- Banner de Alerta Crítica Lavandería -->
+    <!-- Panel de Alarmas (<= 20%) -->
     <section id="panel-alarmas" class="hidden bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl card-shadow">
       <div class="flex items-start gap-3">
         <span class="text-xl">🚨</span>
         <div>
-          <h3 class="font-bold text-red-800 text-sm">Solicitud de Suministro Requerida (Nivel ≤ 20%)</h3>
-          <ul id="lista-alarmas" class="text-xs text-red-700 mt-1 list-disc list-inside space-y-0.5"></ul>
+          <h3 class="font-bold text-red-800 text-sm">Alerta de Nivel Crítico (≤ 20%)</h3>
+          <ul id="lista-alarmas" class="text-xs text-red-700 mt-1 list-disc list-inside space-y-0.5 font-medium"></ul>
         </div>
       </div>
     </section>
 
-    <!-- SECCIÓN 1: AGUA Y GAS -->
-    <section id="sec-mantenimiento" class="space-y-6">
-      <div class="flex items-center justify-between">
-        <h2 class="text-base font-bold text-slate-700 uppercase tracking-wider">1. Recursos Hídricos y Gas</h2>
-        <span class="text-xs text-slate-400">Toque el botón para marcar recurso activo</span>
+    <!-- GRÁFICO DE BARRAS VERTICALES: TANQUES Y CILINDROS -->
+    <section class="bg-white p-5 md:p-6 rounded-2xl border border-stone-200/80 card-shadow">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-stone-100 pb-4 mb-6">
+        <div>
+          <h2 class="text-base font-bold text-slate-800">Gráfico de Niveles — Agua y Gas</h2>
+          <p class="text-xs text-slate-400">Vista comparativa en % (Verde = Recurso actualmente en uso)</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-4 text-xs font-semibold">
+          <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-emerald-500 inline-block"></span> En uso</span>
+          <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-sky-400 inline-block"></span> Agua</span>
+          <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-amber-400 inline-block"></span> Gas</span>
+          <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-red-500 inline-block"></span> ≤ 20%</span>
+        </div>
       </div>
+      <div id="grafico-barras" class="grid grid-cols-2 md:grid-cols-4 gap-6 items-end pt-4"></div>
+    </section>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <!-- Tanques de Agua -->
+    <!-- CONTROLES DE AGUA (MANUAL + CISTERNAS) Y GAS (-2% DIARIO) -->
+    <section id="sec-mantenimiento" class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+
+      <!-- Columna Izquierda: Tanques de Agua + Registro Diario de Cisternas -->
+      <div class="space-y-6">
         <div class="bg-white p-5 rounded-2xl border border-stone-200/80 card-shadow space-y-4">
-          <div class="flex items-center gap-2 border-b border-stone-100 pb-3">
-            <span class="p-2 bg-sky-50 text-sky-600 rounded-lg text-lg">💧</span>
-            <div>
-              <h3 class="font-bold text-slate-800">Tanques de Agua</h3>
-              <p class="text-xs text-slate-400">Control de almacenamiento externo e interno</p>
+          <div class="flex items-center justify-between border-b border-stone-100 pb-3">
+            <div class="flex items-center gap-2.5">
+              <span class="p-2 bg-sky-50 text-sky-600 rounded-lg text-lg">💧</span>
+              <div>
+                <h3 class="font-bold text-slate-800">Tanques de Agua</h3>
+                <p class="text-xs text-slate-400">Registro manual en porcentaje</p>
+              </div>
             </div>
+            <span class="text-[11px] font-semibold bg-sky-50 text-sky-700 px-2.5 py-1 rounded-md">Manual</span>
           </div>
           <div id="contenedor-agua" class="space-y-4"></div>
         </div>
 
-        <!-- Bombonas de Gas -->
-        <div class="bg-white p-5 rounded-2xl border border-stone-200/80 card-shadow space-y-4">
-          <div class="flex items-center gap-2 border-b border-stone-100 pb-3">
-            <span class="p-2 bg-amber-50 text-amber-600 rounded-lg text-lg">🔥</span>
-            <div>
-              <h3 class="font-bold text-slate-800">Bombonas de Gas</h3>
-              <p class="text-xs text-slate-400">Control de cilindros superior e inferior</p>
+        <!-- Submódulo: Registro Diario de Suministro de Cisternas -->
+        <div class="bg-white p-5 rounded-2xl border border-sky-200/80 card-shadow space-y-4">
+          <div class="flex items-center justify-between border-b border-stone-100 pb-3">
+            <div class="flex items-center gap-2.5">
+              <span class="p-2 bg-sky-50 text-sky-700 rounded-lg text-lg">🚛</span>
+              <div>
+                <h3 class="font-bold text-slate-800">Suministro de Cisternas</h3>
+                <p class="text-xs text-slate-400">Registro diario y consolidado semanal / mensual</p>
+              </div>
+            </div>
+            <span class="text-[11px] font-semibold bg-sky-50 text-sky-700 px-2.5 py-1 rounded-md">Agua</span>
+          </div>
+
+          <!-- Resumen Semanal y Mensual -->
+          <div class="grid grid-cols-3 gap-3">
+            <div class="bg-stone-50 border border-stone-200/80 rounded-xl p-3 text-center">
+              <span class="block text-[11px] font-semibold text-slate-400">Hoy</span>
+              <span id="cisternas-hoy" class="text-xl font-extrabold text-sky-700">0</span>
+              <span class="block text-[10px] text-slate-400">cisternas</span>
+            </div>
+            <div class="bg-sky-50/70 border border-sky-200/80 rounded-xl p-3 text-center">
+              <span class="block text-[11px] font-semibold text-sky-700">Esta Semana</span>
+              <span id="cisternas-semana" class="text-xl font-extrabold text-sky-800">0</span>
+              <span class="block text-[10px] text-sky-600">cisternas</span>
+            </div>
+            <div class="bg-amber-50/70 border border-amber-200/80 rounded-xl p-3 text-center">
+              <span class="block text-[11px] font-semibold text-amber-800">Este Mes</span>
+              <span id="cisternas-mes" class="text-xl font-extrabold text-amber-900">0</span>
+              <span class="block text-[10px] text-amber-700">cisternas</span>
             </div>
           </div>
-          <div id="contenedor-gas" class="space-y-4"></div>
+
+          <!-- Formulario de Registro Diario -->
+          <form id="form-cisterna" class="grid grid-cols-1 sm:grid-cols-12 gap-2.5 pt-1">
+            <div class="sm:col-span-4">
+              <label class="block text-[11px] font-semibold text-slate-500 mb-1">Fecha</label>
+              <input
+                type="date"
+                id="cisterna-fecha"
+                required
+                class="w-full rounded-lg border border-stone-300 px-2.5 py-2 text-xs text-slate-800 bg-white focus:outline-none focus:border-sky-500"
+              />
+            </div>
+            <div class="sm:col-span-3">
+              <label class="block text-[11px] font-semibold text-slate-500 mb-1">Cantidad</label>
+              <input
+                type="number"
+                id="cisterna-cantidad"
+                min="1"
+                step="1"
+                value="1"
+                required
+                class="w-full rounded-lg border border-stone-300 px-2.5 py-2 text-xs text-slate-800 bg-white focus:outline-none focus:border-sky-500"
+              />
+            </div>
+            <div class="sm:col-span-5">
+              <label class="block text-[11px] font-semibold text-slate-500 mb-1">Tanque / Nota</label>
+              <input
+                type="text"
+                id="cisterna-destino"
+                placeholder="Ej. Tanque Externo"
+                class="w-full rounded-lg border border-stone-300 px-2.5 py-2 text-xs text-slate-800 bg-white focus:outline-none focus:border-sky-500"
+              />
+            </div>
+            <div class="sm:col-span-12">
+              <button
+                type="submit"
+                class="w-full bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold py-2.5 px-4 rounded-lg transition cursor-pointer"
+              >
+                + Registrar Suministro de Cisterna
+              </button>
+            </div>
+          </form>
+
+          <!-- Historial Reciente -->
+          <div class="pt-2 border-t border-stone-100">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-slate-600">Últimos registros diarios</span>
+              <span class="text-[11px] text-slate-400">Semanal: Lun–Dom</span>
+            </div>
+            <div id="lista-cisternas" class="divide-y divide-stone-100 max-h-52 overflow-y-auto text-xs"></div>
+          </div>
         </div>
       </div>
-    </section>
 
-    <!-- SECCIÓN 2: LAVANDERÍA -->
-    <section id="sec-lavanderia" class="space-y-4">
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-        <h2 class="text-base font-bold text-slate-700 uppercase tracking-wider">2. Químicos de Lavandería</h2>
-        <span class="text-xs text-slate-500 bg-stone-200/60 px-2.5 py-1 rounded-md">Consumo automático: <strong>-2% diario</strong> | Alerta: <strong>≤ 20%</strong></span>
+      <!-- Columna Derecha: Cilindros de Gas (-2% diario + Alerta <= 20%) -->
+      <div class="bg-white p-5 rounded-2xl border border-stone-200/80 card-shadow space-y-4">
+        <div class="flex items-center justify-between border-b border-stone-100 pb-3">
+          <div class="flex items-center gap-2.5">
+            <span class="p-2 bg-amber-50 text-amber-600 rounded-lg text-lg">🔥</span>
+            <div>
+              <h3 class="font-bold text-slate-800">Cilindros de Gas</h3>
+              <p class="text-xs text-slate-400">Superior e Inferior</p>
+            </div>
+          </div>
+          <span class="text-[11px] font-semibold bg-amber-50 text-amber-700 px-2.5 py-1 rounded-md">-2% diario · Alerta ≤ 20%</span>
+        </div>
+        <div id="contenedor-gas" class="space-y-4"></div>
       </div>
 
+    </section>
+
+    <!-- LAVANDERÍA (MANUAL + ALERTA <= 20%) -->
+    <section id="sec-lavanderia" class="space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div>
+          <h2 class="text-base font-bold text-slate-800">Lavandería — Control de Insumos</h2>
+          <p class="text-xs text-slate-400">Alpha · Beta · Hypo · Ecosoft (Registro manual en % y alerta ≤ 20%)</p>
+        </div>
+      </div>
       <div id="contenedor-lavanderia" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
     </section>
 
   </main>
 
-  <!-- Navegación Inferior Móvil -->
+  <!-- Navegación Móvil -->
   <nav class="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-stone-200 flex justify-around py-2.5 z-40">
+    <a href="#grafico-barras" class="flex flex-col items-center text-xs font-semibold text-slate-700">
+      <span class="text-lg">📊</span>
+      <span>Gráfico</span>
+    </a>
     <a href="#sec-mantenimiento" class="flex flex-col items-center text-xs font-semibold text-slate-700">
       <span class="text-lg">🛠️</span>
       <span>Agua y Gas</span>
