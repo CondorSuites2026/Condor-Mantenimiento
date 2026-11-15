@@ -1,4 +1,4 @@
-const SUPABASE_URL = "https://TU_PROYECTO.supabase.co";
-const SUPABASE_ANON_KEY = "TU_ANON_PUBLIC_KEY";
+const SUPABASE_URL = "https://rudmdcstjiaqzeoepbep.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1ZG1kY3N0amlhcXplb2VwYmVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ3NzIyMTEsImV4cCI6MjExMDM0ODIxMX0.pCbWj7XLXiOQDq5P2oS0-2kTA0wCeUXK09orij6yO0o";
 
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
