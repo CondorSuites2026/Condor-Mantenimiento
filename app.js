@@ -26,6 +26,123 @@ document.addEventListener("DOMContentLoaded", () => {
   cargarTodo();
 });
 
+// Dentro de DOMContentLoaded:
+const inputFechaPlanta = document.getElementById("planta-fecha");
+if (inputFechaPlanta) inputFechaPlanta.value = hoyISO;
+
+const formConsumoPlanta = document.getElementById("form-consumo-planta");
+if (formConsumoPlanta) formConsumoPlanta.addEventListener("submit", registrarConsumoPlanta);
+
+// Dentro de cargarTodo():
+// await cargarConsumoPlanta();
+
+function calcularHorasOperacion(horaOn, horaOff) {
+  const [h1, m1] = horaOn.split(":").map(Number);
+  const [h2, m2] = horaOff.split(":").map(Number);
+  let inicioMin = h1 * 60 + m1;
+  let finMin = h2 * 60 + m2;
+  if (finMin <= inicioMin) {
+    finMin += 24 * 60; // Soporta encendido nocturno que pasa de medianoche
+  }
+  return Number(((finMin - inicioMin) / 60).toFixed(2));
+}
+
+async function registrarConsumoPlanta(event) {
+  event.preventDefault();
+
+  const fecha = document.getElementById("planta-fecha").value;
+  const horaOn = document.getElementById("planta-on").value;
+  const horaOff = document.getElementById("planta-off").value;
+  const litros = parseFloat(document.getElementById("planta-litros").value);
+
+  if (!fecha || !horaOn || !horaOff || isNaN(litros) || litros <= 0) return;
+
+  const horas = calcularHorasOperacion(horaOn, horaOff);
+  const consumoHora = Number((litros / horas).toFixed(2));
+
+  const { error } = await supabaseClient
+    .from("consumo_planta_gasoil")
+    .insert([{
+      fecha,
+      hora_on: horaOn,
+      hora_off: horaOff,
+      horas,
+      litros_consumidos: litros,
+      consumo_hora: consumoHora,
+    }]);
+
+  if (error) return console.error("Error registrando consumo de planta:", error);
+
+  // Descontar automáticamente del tanque de gasoil si hay nivel disponible
+  if (typeof actualizarLitrosGasoil === "function" && gasoilLitrosActuales > 0) {
+    const nuevoNivel = Math.max(0, Number((gasoilLitrosActuales - litros).toFixed(2)));
+    await actualizarLitrosGasoil(nuevoNivel);
+  }
+
+  document.getElementById("planta-litros").value = "";
+  cargarConsumoPlanta();
+}
+
+async function eliminarConsumoPlanta(id) {
+  if (!confirm("¿Eliminar este registro de consumo de la planta?")) return;
+  await supabaseClient.from("consumo_planta_gasoil").delete().eq("id", id);
+  cargarConsumoPlanta();
+}
+
+async function cargarConsumoPlanta() {
+  const { data, error } = await supabaseClient
+    .from("consumo_planta_gasoil")
+    .select("*")
+    .order("fecha", { ascending: false })
+    .order("id", { ascending: false });
+
+  if (error) return console.error("Error cargando consumo de planta:", error);
+
+  const tbody = document.getElementById("tabla-consumo-planta");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+
+  const hoyISO = obtenerFechaLocalISO();
+  let horasHoy = 0;
+  let totalHoras = 0;
+  let totalLitros = 0;
+
+  if (!data || !data.length) {
+    tbody.innerHTML = `<tr><td colspan="7" class="py-4 text-center text-slate-400">Sin registros de encendido/apagado todavía.</td></tr>`;
+    document.getElementById("planta-horas-hoy").textContent = "0.00 h";
+    document.getElementById("planta-promedio-lh").textContent = "0.00 L/h";
+    return;
+  }
+
+  data.forEach((row) => {
+    const h = Number(row.horas) || 0;
+    const l = Number(row.litros_consumidos) || 0;
+    const lh = Number(row.consumo_hora) || (h > 0 ? l / h : 0);
+
+    if (row.fecha === hoyISO) horasHoy += h;
+    totalHoras += h;
+    totalLitros += l;
+
+    tbody.innerHTML += `
+      <tr class="hover:bg-stone-50/80">
+        <td class="py-2 px-3 font-medium text-slate-700">${formatearFecha(row.fecha)}</td>
+        <td class="py-2 px-3 font-mono text-emerald-700 font-semibold">${row.hora_on.slice(0, 5)}</td>
+        <td class="py-2 px-3 font-mono text-rose-700 font-semibold">${row.hora_off.slice(0, 5)}</td>
+        <td class="py-2 px-3 font-semibold text-slate-800">${h.toFixed(2)} h</td>
+        <td class="py-2 px-3 text-slate-700">${formatearNumero(l)} L</td>
+        <td class="py-2 px-3 font-bold text-amber-800">${lh.toFixed(2)} L/h</td>
+        <td class="py-2 px-3 text-right">
+          <button onclick="eliminarConsumoPlanta(${row.id})" class="text-stone-400 hover:text-red-600 px-1.5 cursor-pointer" title="Eliminar">✕</button>
+        </td>
+      </tr>
+    `;
+  });
+
+  const promedioGlobal = totalHoras > 0 ? totalLitros / totalHoras : 0;
+  document.getElementById("planta-horas-hoy").textContent = `${horasHoy.toFixed(2)} h`;
+  document.getElementById("planta-promedio-lh").textContent = `${promedioGlobal.toFixed(2)} L/h`;
+}
+
 async function cargarTodo() {
   await Promise.all([
     cargarMantenimiento(),
