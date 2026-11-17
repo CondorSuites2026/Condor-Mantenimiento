@@ -521,6 +521,13 @@ async function cargarLavanderia() {
 
   if (error) return console.error("Error cargando lavandería:", error);
 
+  const etiquetasProductos = {
+    alpha: "(Detergente)",
+    beta: "(Incrementador)",
+    hypo: "(Blanqueador)",
+    ecosoft: "(Suavisante)",
+  };
+
   const contLav = document.getElementById("contenedor-lavanderia");
   contLav.innerHTML = "";
   const alertasLav = [];
@@ -528,6 +535,8 @@ async function cargarLavanderia() {
   data.forEach((prod) => {
     const porcentaje = prod.porcentaje;
     const esCritico = porcentaje <= 20;
+    const clave = (prod.nombre || "").trim().toLowerCase();
+    const subtipo = etiquetasProductos[clave] || "";
 
     if (esCritico) {
       alertasLav.push(`Lavandería - ${prod.nombre} al ${porcentaje}% (Solicitar suministro)`);
@@ -538,12 +547,19 @@ async function cargarLavanderia() {
         esCritico ? "border-red-400 bg-red-50/30" : "border-stone-200/80"
       }">
         <div>
-          <div class="flex items-center justify-between mb-1">
-            <h4 class="font-bold text-slate-800 text-base">${prod.nombre}</h4>
+          <div class="flex items-center justify-between gap-2 mb-1">
+            <h4 class="font-bold text-slate-800 text-base flex items-baseline gap-1.5 flex-wrap">
+              <span>${prod.nombre}</span>
+              ${
+                subtipo
+                  ? `<span class="text-xs font-normal text-slate-400">${subtipo}</span>`
+                  : ""
+              }
+            </h4>
             ${
               esCritico
-                ? `<span class="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-full">ALERTA ≤ 20%</span>`
-                : `<span class="bg-emerald-50 text-emerald-700 text-[10px] font-semibold px-2 py-0.5 rounded-full">ÓPTIMO</span>`
+                ? `<span class="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0">ALERTA ≤ 20%</span>`
+                : `<span class="bg-emerald-50 text-emerald-700 text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0">ÓPTIMO</span>`
             }
           </div>
           <p class="text-xs text-slate-400 mb-3">Duración ref.: ${prod.duracion_texto}</p>
