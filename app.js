@@ -178,7 +178,7 @@ function dibujarEscalaVisorGasoil() {
   lineasInternas.innerHTML = "";
 
   // Marcas: 0, 10, 20, ..., 120 y tope 122 cm
-  const marcas = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 122];
+  const marcas = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 122];
 
   marcas.forEach((cm) => {
     const pctBottom = (cm / GASOIL_ALTURA_CM) * 100;
