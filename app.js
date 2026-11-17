@@ -1,14 +1,28 @@
+// Constantes físicas del Tanque de Gasoil (241 cm x 61 cm x 122 cm)
+const GASOIL_LARGO_CM = 241;
+const GASOIL_ANCHO_CM = 61;
+const GASOIL_ALTURA_CM = 122;
+const GASOIL_LITROS_POR_CM = (GASOIL_LARGO_CM * GASOIL_ANCHO_CM) / 1000; // 14.701 L/cm
+const GASOIL_CAPACIDAD_MAX = Number((GASOIL_LITROS_POR_CM * GASOIL_ALTURA_CM).toFixed(2)); // 1793.52 L
+
+let gasoilLitrosActuales = 0;
+
 document.addEventListener("DOMContentLoaded", () => {
-  const inputFecha = document.getElementById("cisterna-fecha");
-  if (inputFecha) {
-    inputFecha.value = obtenerFechaLocalISO();
-  }
+  const hoyISO = obtenerFechaLocalISO();
+
+  const inputFechaCisterna = document.getElementById("cisterna-fecha");
+  if (inputFechaCisterna) inputFechaCisterna.value = hoyISO;
+
+  const inputFechaRecarga = document.getElementById("recarga-gasoil-fecha");
+  if (inputFechaRecarga) inputFechaRecarga.value = hoyISO;
 
   const formCisterna = document.getElementById("form-cisterna");
-  if (formCisterna) {
-    formCisterna.addEventListener("submit", registrarCisterna);
-  }
+  if (formCisterna) formCisterna.addEventListener("submit", registrarCisterna);
 
+  const formRecargaGasoil = document.getElementById("form-recarga-gasoil");
+  if (formRecargaGasoil) formRecargaGasoil.addEventListener("submit", confirmarRecargaGasoil);
+
+  dibujarEscalaVisorGasoil();
   cargarTodo();
 });
 
@@ -17,6 +31,7 @@ async function cargarTodo() {
     cargarMantenimiento(),
     cargarLavanderia(),
     cargarCisternas(),
+    cargarGasoil(),
   ]);
 }
 
@@ -27,6 +42,224 @@ function obtenerFechaLocalISO(fechaObj = new Date()) {
   return `${anio}-${mes}-${dia}`;
 }
 
+function formatearNumero(valor) {
+  return Number(valor).toLocaleString("es-VE", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+// ==========================================
+// 0. TANQUE DE GASOIL (VISOR 10 CM + MODAL RECARGA)
+// ==========================================
+function dibujarEscalaVisorGasoil() {
+  const regleta = document.getElementById("gasoil-regleta");
+  const lineasInternas = document.getElementById("gasoil-lineas-internas");
+  if (!regleta || !lineasInternas) return;
+
+  regleta.innerHTML = "";
+  lineasInternas.innerHTML = "";
+
+  // Marcas: 0, 10, 20, ..., 120 y tope 122 cm
+  const marcas = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 122];
+
+  marcas.forEach((cm) => {
+    const pctBottom = (cm / GASOIL_ALTURA_CM) * 100;
+    const litrosMarca = cm * GASOIL_LITROS_POR_CM;
+    const esTope = cm === 122;
+
+    // Línea horizontal dentro del visor
+    lineasInternas.innerHTML += `
+      <div
+        style="bottom: ${pctBottom}%;"
+        class="absolute left-0 right-0 border-t ${esTope ? "border-red-400 border-dashed" : "border-slate-400/50"}">
+      </div>
+    `;
+
+    // Etiqueta exterior en cm y Litros
+    regleta.innerHTML += `
+      <div
+        style="bottom: ${pctBottom}%; transform: translateY(50%);"
+        class="absolute left-0 right-0 flex items-center gap-1.5 leading-none">
+        <span class="w-2.5 h-[1.5px] bg-slate-500 inline-block shrink-0"></span>
+        <span class="font-bold text-slate-700 w-11 shrink-0">${cm} cm</span>
+        <span class="text-slate-500">→</span>
+        <span class="font-semibold ${esTope ? "text-amber-700 font-bold" : "text-slate-700"}">
+          ${formatearNumero(litrosMarca)} L
+        </span>
+      </div>
+    `;
+  });
+}
+
+async function cargarGasoil() {
+  const { data, error } = await supabaseClient
+    .from("tanque_gasoil")
+    .select("*")
+    .eq("id", 1)
+    .single();
+
+  if (error) {
+    console.error("Error cargando gasoil:", error);
+    return;
+  }
+
+  gasoilLitrosActuales = Math.min(GASOIL_CAPACIDAD_MAX, Math.max(0, Number(data.litros_actuales) || 0));
+  const porcentaje = (gasoilLitrosActuales / GASOIL_CAPACIDAD_MAX) * 100;
+  const alturaCm = gasoilLitrosActuales / GASOIL_LITROS_POR_CM;
+  const espacioLibre = Math.max(0, GASOIL_CAPACIDAD_MAX - gasoilLitrosActuales);
+  const esCritico = porcentaje <= 20;
+
+  const liquidoEl = document.getElementById("gasoil-liquido");
+  liquidoEl.style.height = `${porcentaje.toFixed(1)}%`;
+  liquidoEl.className = `w-full transition-all duration-500 border-t-2 ${
+    esCritico
+      ? "bg-red-500/85 border-red-700"
+      : "bg-amber-400/90 border-amber-600"
+  }`;
+
+  document.getElementById("gasoil-litros-txt").textContent = `${formatearNumero(gasoilLitrosActuales)} L`;
+  document.getElementById("gasoil-pct-txt").textContent = `${porcentaje.toFixed(1)}%`;
+  document.getElementById("gasoil-cm-txt").textContent = `${alturaCm.toFixed(1)} cm`;
+  document.getElementById("gasoil-libre-txt").textContent = `${formatearNumero(espacioLibre)} L`;
+  document.getElementById("gasoil-actualizado").textContent = data.actualizado_en
+    ? `Act: ${formatearFecha(data.actualizado_en)}`
+    : "";
+
+  window._alertasGasoil = esCritico
+    ? [`Planta Eléctrica - Gasoil al ${porcentaje.toFixed(1)}% (${formatearNumero(gasoilLitrosActuales)} L) — Solicitar suministro`]
+    : [];
+
+  renderizarPanelAlertas();
+  cargarHistorialGasoil();
+}
+
+async function cargarHistorialGasoil() {
+  const { data, error } = await supabaseClient
+    .from("recargas_gasoil")
+    .select("*")
+    .order("fecha", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(8);
+
+  if (error) return console.error("Error cargando historial de gasoil:", error);
+
+  const lista = document.getElementById("lista-recargas-gasoil");
+  lista.innerHTML = "";
+
+  if (!data || !data.length) {
+    lista.innerHTML = `<p class="py-3 text-center text-slate-400">Sin recargas de gasoil registradas.</p>`;
+    return;
+  }
+
+  data.forEach((rec) => {
+    lista.innerHTML += `
+      <div class="py-2 flex items-center justify-between gap-2">
+        <div>
+          <span class="font-bold text-amber-800">+${formatearNumero(rec.litros_agregados)} L</span>
+          <span class="text-slate-500"> → Total: ${formatearNumero(rec.litros_resultantes)} L</span>
+          ${rec.observacion ? `<span class="block text-[11px] text-slate-400">${rec.observacion}</span>` : ""}
+        </div>
+        <span class="text-[11px] font-semibold text-slate-400 shrink-0">${formatearFecha(rec.fecha)}</span>
+      </div>
+    `;
+  });
+}
+
+async function guardarLecturaCm() {
+  const cm = parseFloat(document.getElementById("input-gasoil-cm").value);
+  if (isNaN(cm) || cm < 0 || cm > GASOIL_ALTURA_CM) {
+    alert(`Ingrese una altura válida entre 0 y ${GASOIL_ALTURA_CM} cm.`);
+    return;
+  }
+  const litrosCalculados = Number((cm * GASOIL_LITROS_POR_CM).toFixed(2));
+  await actualizarLitrosGasoil(litrosCalculados);
+  document.getElementById("input-gasoil-cm").value = "";
+}
+
+async function guardarLecturaLitros() {
+  const litros = parseFloat(document.getElementById("input-gasoil-litros").value);
+  if (isNaN(litros) || litros < 0 || litros > GASOIL_CAPACIDAD_MAX) {
+    alert(`Ingrese una cantidad válida entre 0 y ${GASOIL_CAPACIDAD_MAX} litros.`);
+    return;
+  }
+  await actualizarLitrosGasoil(Number(litros.toFixed(2)));
+  document.getElementById("input-gasoil-litros").value = "";
+}
+
+async function actualizarLitrosGasoil(nuevosLitros) {
+  await supabaseClient
+    .from("tanque_gasoil")
+    .update({
+      litros_actuales: nuevosLitros,
+      actualizado_en: new Date().toISOString(),
+    })
+    .eq("id", 1);
+
+  cargarGasoil();
+}
+
+// Funciones del Modal de Recarga de Gasoil
+function abrirModalGasoil() {
+  const espacioLibre = Math.max(0, Number((GASOIL_CAPACIDAD_MAX - gasoilLitrosActuales).toFixed(2)));
+  document.getElementById("modal-gasoil-actual").textContent = `${formatearNumero(gasoilLitrosActuales)} L`;
+  document.getElementById("modal-gasoil-max").textContent = `${formatearNumero(espacioLibre)} L`;
+
+  const inputLitros = document.getElementById("recarga-gasoil-litros");
+  inputLitros.max = espacioLibre;
+  inputLitros.value = "";
+  document.getElementById("recarga-gasoil-obs").value = "";
+
+  document.getElementById("modal-gasoil").classList.remove("hidden");
+}
+
+function cerrarModalGasoil() {
+  document.getElementById("modal-gasoil").classList.add("hidden");
+}
+
+function llenarCompletoModalGasoil() {
+  const espacioLibre = Math.max(0, Number((GASOIL_CAPACIDAD_MAX - gasoilLitrosActuales).toFixed(2)));
+  document.getElementById("recarga-gasoil-litros").value = espacioLibre;
+}
+
+async function confirmarRecargaGasoil(event) {
+  event.preventDefault();
+
+  const fecha = document.getElementById("recarga-gasoil-fecha").value;
+  const litrosAgregar = parseFloat(document.getElementById("recarga-gasoil-litros").value);
+  const observacion = document.getElementById("recarga-gasoil-obs").value.trim();
+
+  if (isNaN(litrosAgregar) || litrosAgregar <= 0) return;
+
+  const nuevosLitros = Math.min(
+    GASOIL_CAPACIDAD_MAX,
+    Number((gasoilLitrosActuales + litrosAgregar).toFixed(2))
+  );
+
+  await supabaseClient
+    .from("tanque_gasoil")
+    .update({
+      litros_actuales: nuevosLitros,
+      actualizado_en: new Date().toISOString(),
+    })
+    .eq("id", 1);
+
+  await supabaseClient
+    .from("recargas_gasoil")
+    .insert([{
+      fecha,
+      litros_agregados: Number(litrosAgregar.toFixed(2)),
+      litros_resultantes: nuevosLitros,
+      observacion,
+    }]);
+
+  cerrarModalGasoil();
+  cargarGasoil();
+}
+
+// ==========================================
+// 1. AGUA (MANUAL) Y GAS (-2% DIARIO)
+// ==========================================
 function calcularPorcentajeGas(porcentajeBase, fechaBaseStr) {
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
@@ -36,9 +269,6 @@ function calcularPorcentajeGas(porcentajeBase, fechaBaseStr) {
   return Math.max(0, porcentajeBase - descuento);
 }
 
-// ==========================================
-// 1. AGUA (MANUAL) Y GAS (-2% DIARIO)
-// ==========================================
 async function cargarMantenimiento() {
   const { data, error } = await supabaseClient
     .from("mantenimiento_recursos")
@@ -131,8 +361,13 @@ async function cargarMantenimiento() {
             class="w-full h-2 bg-stone-200 rounded-lg cursor-pointer"
           />
           <button 
+            onclick="pedirPorcentajeRecurso(${item.id}, '${item.nombre}', ${porcentajeReal})"
+            class="text-[11px] bg-white border border-stone-300 px-2.5 py-1 rounded-md font-bold hover:bg-stone-100 cursor-pointer shrink-0">
+            Editar %
+          </button>
+          <button 
             onclick="actualizarRecursoManual(${item.id}, 100)"
-            class="text-[11px] bg-white border border-stone-300 px-2.5 py-1 rounded-md font-bold hover:bg-stone-100 cursor-pointer">
+            class="text-[11px] bg-white border border-stone-300 px-2.5 py-1 rounded-md font-bold hover:bg-stone-100 cursor-pointer shrink-0">
             100%
           </button>
         </div>
@@ -170,8 +405,16 @@ async function actualizarRecursoManual(id, nuevoPorcentaje) {
   cargarMantenimiento();
 }
 
+async function pedirPorcentajeRecurso(id, nombre, actual) {
+  const entrada = prompt(`Porcentaje actual de ${nombre} (0 - 100):`, actual);
+  if (entrada === null) return;
+  const valor = parseInt(entrada, 10);
+  if (isNaN(valor) || valor < 0 || valor > 100) return;
+  await actualizarRecursoManual(id, valor);
+}
+
 // ==========================================
-// 2. REGISTRO DIARIO DE CISTERNAS (SEMANAL / MENSUAL)
+// 2. REGISTRO DIARIO DE CISTERNAS
 // ==========================================
 async function registrarCisterna(event) {
   event.preventDefault();
@@ -186,10 +429,7 @@ async function registrarCisterna(event) {
     .from("suministro_cisternas")
     .insert([{ fecha, cantidad, destino }]);
 
-  if (error) {
-    console.error("Error registrando cisterna:", error);
-    return;
-  }
+  if (error) return console.error("Error registrando cisterna:", error);
 
   document.getElementById("cisterna-cantidad").value = 1;
   document.getElementById("cisterna-destino").value = "";
@@ -220,14 +460,12 @@ async function cargarCisternas() {
   hoy.setHours(0, 0, 0, 0);
   const hoyISO = obtenerFechaLocalISO(hoy);
 
-  // Inicio de semana actual (Lunes)
   const inicioSemana = new Date(hoy);
-  const diaSemana = inicioSemana.getDay(); // 0 = Domingo, 1 = Lunes...
+  const diaSemana = inicioSemana.getDay();
   const diffLunes = diaSemana === 0 ? -6 : 1 - diaSemana;
   inicioSemana.setDate(inicioSemana.getDate() + diffLunes);
   const inicioSemanaISO = obtenerFechaLocalISO(inicioSemana);
 
-  // Prefijo del mes actual (YYYY-MM)
   const prefijoMes = hoyISO.slice(0, 7);
 
   let totalHoy = 0;
@@ -367,7 +605,11 @@ async function pedirPorcentajeLavanderia(id, nombre, actual) {
 }
 
 function renderizarPanelAlertas() {
-  const todas = [...(window._alertasGas || []), ...(window._alertasLav || [])];
+  const todas = [
+    ...(window._alertasGasoil || []),
+    ...(window._alertasGas || []),
+    ...(window._alertasLav || []),
+  ];
   const panel = document.getElementById("panel-alarmas");
   const lista = document.getElementById("lista-alarmas");
   const badge = document.getElementById("badge-alertas");
