@@ -526,6 +526,7 @@ async function cargarLavanderia() {
     beta: "(Incrementador)",
     hypo: "(Blanqueador)",
     ecosoft: "(Suavisante)",
+    rust: "(Oxidante)",
   };
 
   const contLav = document.getElementById("contenedor-lavanderia");
