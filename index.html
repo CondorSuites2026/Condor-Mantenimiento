@@ -86,7 +86,39 @@
           + Recargar Gasoil (Litros)
         </button>
       </div>
+      <!-- NUEVA TARJETA: Tanque Diario Interno de Planta (400 L) -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start mb-6">
+        <!-- Tarjeta Izquierda: Estado Tanque Diario 400L -->
+        <div class="lg:col-span-4 bg-amber-50/50 border border-amber-200/80 rounded-2xl p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-amber-900">Tanque Diario Planta (Servicio)</span>
+            <span id="diario-estado-badge" class="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full">FULL (100%)</span>
+          </div>
 
+          <div class="flex items-end justify-between">
+            <div>
+              <span id="diario-litros-txt" class="text-2xl font-extrabold text-amber-950">400,00 L</span>
+              <span class="block text-[11px] text-amber-700">Capacidad fija: 400 L</span>
+            </div>
+            <button
+              onclick="llenarTanqueDiario()"
+              class="bg-amber-700 hover:bg-amber-800 text-white text-xs font-bold px-3 py-2 rounded-xl transition cursor-pointer shadow-sm">
+              Completar 400L
+            </button>
+          </div>
+
+          <div class="w-full bg-stone-200 rounded-full h-2.5 overflow-hidden">
+            <div id="diario-barra" class="bg-amber-500 h-2.5 rounded-full transition-all" style="width: 100%;"></div>
+          </div>
+          <p class="text-[11px] text-slate-500">Este tanque interno abastece los ciclos diarios y debe mantenerse siempre al 100%.</p>
+        </div>
+
+        <!-- Visor Graduado Principal (1.793,52 L) -->
+        <div class="lg:col-span-8 bg-stone-50 border border-stone-200 rounded-2xl p-4">
+          <!-- (Aquí se mantiene tu visor principal de 122 cm / 1.793,52 L ya existente) -->
+          ...
+        </div>
+      </div>
       <!-- Fila Superior: Visor + Resumen y Lectura -->
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         <!-- Visor Graduado cada 10 cm -->

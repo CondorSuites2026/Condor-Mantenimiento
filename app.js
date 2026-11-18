@@ -57,6 +57,16 @@ if (inputFechaPlanta) inputFechaPlanta.value = hoyISO;
 const formConsumoPlanta = document.getElementById("form-consumo-planta");
 if (formConsumoPlanta) formConsumoPlanta.addEventListener("submit", registrarConsumoPlanta);
 
+// Descontar del tanque diario interno de 400L
+  if (window._litrosDiarioActual !== undefined) {
+    const nuevoDiario = Math.max(0, Number((window._litrosDiarioActual - litros).toFixed(2)));
+    await supabaseClient
+      .from("tanque_gasoil_diario")
+      .update({ litros_actuales: nuevoDiario, actualizado_en: new Date().toISOString() })
+      .eq("id", 1);
+    cargarTanqueDiario();
+  }
+  
 // Dentro de cargarTodo():
 // await cargarConsumoPlanta();
 
@@ -397,7 +407,43 @@ async function confirmarRecargaGasoil(event) {
   cerrarModalGasoil();
   cargarGasoil();
 }
+// Cargar nivel del tanque diario de 400L
+async function cargarTanqueDiario() {
+  const { data, error } = await supabaseClient
+    .from("tanque_gasoil_diario")
+    .select("*")
+    .eq("id", 1)
+    .single();
 
+  if (error) return console.error("Error cargando tanque diario:", error);
+
+  const litros = Number(data.litros_actuales) || 0;
+  const porcentaje = (litros / 400) * 100;
+  const esMenor =litros < 400;
+
+  document.getElementById("diario-litros-txt").textContent = `${formatearNumero(litros)} L`;
+  document.getElementById("diario-barra").style.width = `${Math.min(100, porcentaje)}%`;
+  
+  const badge = document.getElementById("diario-estado-badge");
+  if (esMenor) {
+    badge.className = "bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse";
+    badge.textContent = `REQUIERE TRASVASE (${porcentaje.toFixed(0)}%)`;
+  } else {
+    badge.className = "bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full";
+    badge.textContent = "FULL (100%)";
+  }
+
+  window._litrosDiarioActual = litros;
+}
+
+async function llenarTanqueDiario() {
+  await supabaseClient
+    .from("tanque_gasoil_diario")
+    .update({ litros_actuales: 400.00, actualizado_en: new Date().toISOString() })
+    .eq("id", 1);
+
+  cargarTanqueDiario();
+}
 // ==========================================
 // 1. AGUA (MANUAL) Y GAS (-2% DIARIO)
 // ==========================================
