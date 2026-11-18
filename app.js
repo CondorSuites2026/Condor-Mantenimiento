@@ -7,6 +7,14 @@ const GASOIL_CAPACIDAD_MAX = Number((GASOIL_LITROS_POR_CM * GASOIL_ALTURA_CM).to
 
 let gasoilLitrosActuales = 0;
 
+// Definir primero la función para evitar errores de referencia
+function obtenerFechaLocalISO(fechaObj = new Date()) {
+  const anio = fechaObj.getFullYear();
+  const mes = String(fechaObj.getMonth() + 1).padStart(2, "0");
+  const dia = String(fechaObj.getDate()).padStart(2, "0");
+  return `${anio}-${mes}-${dia}`;
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   const hoyISO = obtenerFechaLocalISO();
 
@@ -16,15 +24,31 @@ document.addEventListener("DOMContentLoaded", () => {
   const inputFechaRecarga = document.getElementById("recarga-gasoil-fecha");
   if (inputFechaRecarga) inputFechaRecarga.value = hoyISO;
 
+  const inputFechaPlanta = document.getElementById("planta-fecha");
+  if (inputFechaPlanta) inputFechaPlanta.value = hoyISO;
+
   const formCisterna = document.getElementById("form-cisterna");
   if (formCisterna) formCisterna.addEventListener("submit", registrarCisterna);
 
   const formRecargaGasoil = document.getElementById("form-recarga-gasoil");
   if (formRecargaGasoil) formRecargaGasoil.addEventListener("submit", confirmarRecargaGasoil);
 
+  const formConsumoPlanta = document.getElementById("form-consumo-planta");
+  if (formConsumoPlanta) formConsumoPlanta.addEventListener("submit", registrarConsumoPlanta);
+
   dibujarEscalaVisorGasoil();
   cargarTodo();
 });
+
+async function cargarTodo() {
+  await Promise.all([
+    cargarMantenimiento(),
+    cargarLavanderia(),
+    cargarCisternas(),
+    cargarGasoil(),
+    cargarConsumoPlanta(),
+  ]);
+}
 
 // Dentro de DOMContentLoaded:
 const inputFechaPlanta = document.getElementById("planta-fecha");
