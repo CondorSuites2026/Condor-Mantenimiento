@@ -66,7 +66,7 @@ if (formConsumoPlanta) formConsumoPlanta.addEventListener("submit", registrarCon
       .eq("id", 1);
     cargarTanqueDiario();
   }
-  
+
 // Dentro de cargarTodo():
 // await cargarConsumoPlanta();
 
@@ -87,14 +87,19 @@ async function registrarConsumoPlanta(event) {
   const fecha = document.getElementById("planta-fecha").value;
   const horaOn = document.getElementById("planta-on").value;
   const horaOff = document.getElementById("planta-off").value;
-  const litros = parseFloat(document.getElementById("planta-litros").value);
+  const litrosInput = document.getElementById("planta-litros").value;
+  const litros = parseFloat(litrosInput);
 
-  if (!fecha || !horaOn || !horaOff || isNaN(litros) || litros <= 0) return;
+  if (!fecha || !horaOn || !horaOff || isNaN(litros) || litros <= 0) {
+    alert("Por favor complete todos los campos correctamente.");
+    return;
+  }
 
   const horas = calcularHorasOperacion(horaOn, horaOff);
   const consumoHora = Number((litros / horas).toFixed(2));
 
-  const { error } = await supabaseClient
+  // 1. Intentar insertar en Supabase
+  const { data, error } = await supabaseClient
     .from("consumo_planta_gasoil")
     .insert([{
       fecha,
@@ -103,18 +108,35 @@ async function registrarConsumoPlanta(event) {
       horas,
       litros_consumidos: litros,
       consumo_hora: consumoHora,
-    }]);
+    }])
+    .select(); // .select() fuerza el retorno del registro insertado para confirmar éxito
 
-  if (error) return console.error("Error registrando consumo de planta:", error);
-
-  // Descontar automáticamente del tanque de gasoil si hay nivel disponible
-  if (typeof actualizarLitrosGasoil === "function" && gasoilLitrosActuales > 0) {
-    const nuevoNivel = Math.max(0, Number((gasoilLitrosActuales - litros).toFixed(2)));
-    await actualizarLitrosGasoil(nuevoNivel);
+  if (error) {
+    console.error("Error detallado al guardar en Supabase:", error);
+    alert("Error al guardar en la base de datos: " + error.message);
+    return;
   }
 
+  // 2. Descontar opcionalmente del tanque diario de gasoil (400L) si existe
+  if (typeof window._litrosDiarioActual !== "undefined" && window._litrosDiarioActual > 0) {
+    const nuevoDiario = Math.max(0, Number((window._litrosDiarioActual - litros).toFixed(2)));
+    await supabaseClient
+      .from("tanque_gasoil_diario")
+      .update({ litros_actuales: nuevoDiario, actualizado_en: new Date().toISOString() })
+      .eq("id", 1);
+    
+    if (typeof cargarTanqueDiario === "function") {
+      cargarTanqueDiario();
+    }
+  }
+
+  // 3. Limpiar formulario y recargar tabla desde Supabase
   document.getElementById("planta-litros").value = "";
-  cargarConsumoPlanta();
+  document.getElementById("planta-on").value = "";
+  document.getElementById("planta-off").value = "";
+  
+  // Recargar datos directamente desde Supabase
+  await cargarConsumoPlanta();
 }
 
 async function eliminarConsumoPlanta(id) {
